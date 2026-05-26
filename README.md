@@ -50,16 +50,35 @@ This repo is the source. Distribution goes through a separate
 1. Bump `version` in [pyproject.toml](pyproject.toml).
 2. Commit, tag, and push:
    ```sh
-   git tag v0.2.0
+   git tag v0.2.2
    git push origin main --tags
    ```
 3. Use the `publish.sh` script to:
 3a. Grab the tarball SHA:
    ```sh
-   curl -sL https://github.com/dfla-me/scrop/archive/refs/tags/v0.2.0.tar.gz | shasum -a 256
+   curl -sL https://github.com/dfla-me/scrop/archive/refs/tags/v0.2.2.tar.gz | shasum -a 256
    ```
 3b. In the `homebrew-scrop` tap repo, update `Formula/scrop.rb` with the new
    `url` (tag) and `sha256`. Push.
+
+### Bumping Python wheel resources
+
+The formula declares `numpy` and `opencv-python-headless` as per-platform
+wheel resources (macOS arm64/x86_64, Linux x86_64/aarch64). To refresh
+them when you want a newer version:
+
+```sh
+# replace <pkg> and <version>
+curl -s https://pypi.org/pypi/<pkg>/<version>/json | jq -r '
+  .urls[] | select(.filename | endswith(".whl")) |
+  "\(.filename)\n  url: \(.url)\n  sha256: \(.digests.sha256)\n"'
+```
+
+Pick the wheels matching `cp314-cp314-macosx_*_arm64`,
+`cp314-cp314-macosx_*_x86_64`, `cp314-cp314-manylinux_2_28_x86_64`,
+`cp314-cp314-manylinux_2_28_aarch64` (or the `cp37-abi3` equivalents for
+opencv-python-headless) and paste into the formula. The comment block
+at the top of `packaging/scrop.rb` has the same pointer.
 
 ## Setting up the tap repo (one-time — DONE!)
 
