@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scrop"
+version = "0.1.0"
+description = "Crop sub-images (photos, sticky notes, receipts) out of a larger scanned composite image."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "dfla-me" }]
+dependencies = [
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+]
+
+[project.scripts]
+scrop = "scrop:main"
+
+[project.urls]
+Homepage = "https://github.com/dfla-me/scrop"
+Issues = "https://github.com/dfla-me/scrop/issues"
+
+[tool.setuptools]
+py-modules = ["scrop"]
