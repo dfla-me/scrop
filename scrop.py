@@ -203,13 +203,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     out_ext = OUTPUT_EXTENSIONS[args.format]
 
     saved = 0
-    for i, contour in enumerate(contours):
+    for contour in contours:
         if cv2.contourArea(contour) < args.min_area:
             continue
         cropped = crop_rotated_rect(image, contour)
         if cropped is None:
             continue
-        out_path = os.path.join(args.output_dir, f"{input_filename}_{i}{out_ext}")
+        out_path = os.path.join(args.output_dir, f"{input_filename}_{saved}{out_ext}")
         if not cv2.imwrite(out_path, cropped):
             print(f"scrop: failed to write {out_path}", file=sys.stderr)
             continue

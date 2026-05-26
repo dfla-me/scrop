@@ -1,6 +1,4 @@
 class Scrop < Formula
-  include Language::Python::Virtualenv
-
   desc "Crop sub-images (photos, sticky notes, receipts) out of a scanned composite image"
   homepage "https://github.com/dfla-me/scrop"
   url "https://github.com/dfla-me/scrop/archive/refs/tags/REPLACE_WITH_TAG.tar.gz"
@@ -13,7 +11,8 @@ class Scrop < Formula
   # numpy and opencv-python-headless are precompiled binaries.
   # To bump versions: update the URL+SHA pairs from
   #   https://pypi.org/pypi/<pkg>/<version>/json
-  # Look for cp314-cp314 wheels (numpy) or cp37-abi3 wheels (opencv-python-headless).
+  # Look for cp314-cp314 wheels (numpy) or cp37-abi3 wheels
+  # (opencv-python-headless, stable ABI: one wheel works for all py3 versions).
 
   on_macos do
     on_arm do
@@ -68,7 +67,39 @@ class Scrop < Formula
   end
 
   def install
-    virtualenv_install_with_resources
+    py = Formula["python@3.14"].opt_bin/"python3.14"
+
+    # Create an isolated venv (no system_site_packages, no pip).
+    system py, "-m", "venv", "--without-pip", libexec
+
+    # We deliberately bypass Homebrew's `Language::Python::Virtualenv`
+    # helpers here because they pass `--no-binary=:all:` to pip, which
+    # refuses to install the precompiled wheels we declare above (and
+    # building opencv-python-headless from sdist is impractical — it
+    # would compile OpenCV from source).
+    pip_install = [
+      py, "-m", "pip",
+      "--python=#{libexec}/bin/python",
+      "--disable-pip-version-check",
+      "install",
+      "--no-deps"
+    ]
+
+    # Install each pre-fetched wheel. Homebrew caches downloads as
+    # `<sha>--<original-name>.whl`, but pip's wheel filename parser splits on
+    # "-" and rejects the SHA-prefixed form. Copy each wheel into the build
+    # directory with its original PyPI filename first.
+    resources.each do |r|
+      wheel_name = r.cached_download.basename.to_s.sub(/\A[a-f0-9]+--/, "")
+      wheel_path = buildpath/wheel_name
+      cp r.cached_download, wheel_path
+      system(*pip_install, wheel_path.to_s)
+    end
+
+    # Install scrop itself from the source tree.
+    system(*pip_install, buildpath.to_s)
+
+    bin.install_symlink libexec/"bin/scrop"
   end
 
   test do
