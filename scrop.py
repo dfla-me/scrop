@@ -4,7 +4,6 @@ import argparse
 import os
 import re
 import sys
-import threading
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 # cv2 and numpy are imported lazily inside main() so that:
@@ -42,57 +41,24 @@ OUTPUT_EXTENSIONS = {
 
 
 def _load_opencv() -> None:
-    """Import cv2 and numpy lazily with a visible progress indicator.
+    """Import cv2 and numpy lazily.
 
-    cv2's first import on a cold filesystem cache can take several seconds.
-    We print a single line on stderr and append dots every 0.5s from a
-    background thread so the user knows the CLI hasn't hung.
+    cv2's first import on a cold filesystem cache can take several seconds
+    while the OS dyld resolves OpenCV's native shared object. We can't
+    animate progress reliably because `import cv2` holds Python's GIL,
+    so a background spinner thread would stall mid-import. Instead we
+    print one honest "please wait" line before the import and a "done."
+    when it returns.
     """
     global cv2, np
     if cv2 is not None:
         return
 
-    loaded = threading.Event()
-    interactive = sys.stderr.isatty()
-
-    def _animated_spinner() -> None:
-        # |/-\ cycles every 0.4s, a dot is appended every 0.5s underneath.
-        frames = "|/-\\"
-        tick = 0.1
-        ticks_per_dot = 5
-        dots = ""
-        i = 0
-        while True:
-            sys.stderr.write(f"\rscrop: loading OpenCV{dots} {frames[i % len(frames)]}")
-            sys.stderr.flush()
-            if loaded.wait(timeout=tick):
-                break
-            i += 1
-            if i % ticks_per_dot == 0:
-                dots += "."
-        # Final line overwrites the spinner glyph.
-        sys.stderr.write(f"\rscrop: loading OpenCV{dots} done.\n")
-        sys.stderr.flush()
-
-    def _plain_spinner() -> None:
-        sys.stderr.write("scrop: loading OpenCV")
-        sys.stderr.flush()
-        while not loaded.wait(timeout=0.5):
-            sys.stderr.write(".")
-            sys.stderr.flush()
-        sys.stderr.write(" done.\n")
-        sys.stderr.flush()
-
-    _spinner = _animated_spinner if interactive else _plain_spinner
-
-    spinner = threading.Thread(target=_spinner, daemon=True)
-    spinner.start()
-    try:
-        import cv2 as _cv2  # noqa: WPS433
-        import numpy as _np  # noqa: WPS433
-    finally:
-        loaded.set()
-        spinner.join(timeout=2.0)
+    print("scrop: loading OpenCV (first run on a cold cache can take a few seconds)...",
+          file=sys.stderr, flush=True)
+    import cv2 as _cv2  # noqa: WPS433
+    import numpy as _np  # noqa: WPS433
+    print("scrop: ready.", file=sys.stderr, flush=True)
 
     cv2 = _cv2
     np = _np
