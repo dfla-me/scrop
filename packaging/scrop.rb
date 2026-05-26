@@ -3,7 +3,7 @@ class Scrop < Formula
 
   desc "Crop sub-images (photos, sticky notes, receipts) out of a scanned composite image"
   homepage "https://github.com/dfla-me/scrop"
-  url "https://github.com/dfla-me/scrop/archive/refs/tags/v0.1.0.tar.gz"
+  url "https://github.com/dfla-me/scrop/archive/refs/tags/REPLACE_WITH_TAG.tar.gz"
   sha256 "REPLACE_WITH_SHA256_OF_TAGGED_TARBALL"
   license "MIT"
 

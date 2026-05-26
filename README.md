@@ -53,14 +53,15 @@ This repo is the source. Distribution goes through a separate
    git tag v0.1.0
    git push origin main --tags
    ```
-3. Grab the tarball SHA:
+3. Use the `publish.sh` script to:
+3a. Grab the tarball SHA:
    ```sh
    curl -sL https://github.com/dfla-me/scrop/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256
    ```
-4. In the `homebrew-scrop` tap repo, update `Formula/scrop.rb` with the new
+3b. In the `homebrew-scrop` tap repo, update `Formula/scrop.rb` with the new
    `url` (tag) and `sha256`. Push.
 
-## Setting up the tap repo (one-time)
+## Setting up the tap repo (one-time — DONE!)
 
 1. Create a new public GitHub repo named exactly **`homebrew-scrop`** under
    the `dfla-me` account.
@@ -70,9 +71,19 @@ This repo is the source. Distribution goes through a separate
 
 ## Development
 
+Requires Python 3.10 or newer. This project pins a dev Python via
+[pyenv](https://github.com/pyenv/pyenv) (see `.python-version`).
+
 ```sh
+# one-time: install the pinned interpreter
+pyenv install   # reads .python-version
+
+# install scrop and its deps into the current environment in editable mode
 pip install -e .
+
+# run it
 scrop tests/sample.jpg /tmp/out
 ```
 
-Requires Python 3.10 or newer.
+The dev Python version is independent of the Homebrew formula's
+`python@3.13` — they don't need to match.
