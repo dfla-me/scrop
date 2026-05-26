@@ -53,8 +53,28 @@ def _load_opencv() -> None:
         return
 
     loaded = threading.Event()
+    interactive = sys.stderr.isatty()
 
-    def _spinner() -> None:
+    def _animated_spinner() -> None:
+        # |/-\ cycles every 0.4s, a dot is appended every 0.5s underneath.
+        frames = "|/-\\"
+        tick = 0.1
+        ticks_per_dot = 5
+        dots = ""
+        i = 0
+        while True:
+            sys.stderr.write(f"\rscrop: loading OpenCV{dots} {frames[i % len(frames)]}")
+            sys.stderr.flush()
+            if loaded.wait(timeout=tick):
+                break
+            i += 1
+            if i % ticks_per_dot == 0:
+                dots += "."
+        # Final line overwrites the spinner glyph.
+        sys.stderr.write(f"\rscrop: loading OpenCV{dots} done.\n")
+        sys.stderr.flush()
+
+    def _plain_spinner() -> None:
         sys.stderr.write("scrop: loading OpenCV")
         sys.stderr.flush()
         while not loaded.wait(timeout=0.5):
@@ -62,6 +82,8 @@ def _load_opencv() -> None:
             sys.stderr.flush()
         sys.stderr.write(" done.\n")
         sys.stderr.flush()
+
+    _spinner = _animated_spinner if interactive else _plain_spinner
 
     spinner = threading.Thread(target=_spinner, daemon=True)
     spinner.start()

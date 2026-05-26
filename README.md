@@ -50,13 +50,13 @@ This repo is the source. Distribution goes through a separate
 1. Bump `version` in [pyproject.toml](pyproject.toml).
 2. Commit, tag, and push:
    ```sh
-   git tag v0.2.4
+   git tag v0.2.5
    git push origin main --tags
    ```
 3. Use the `publish.sh` script to:
 3a. Grab the tarball SHA:
    ```sh
-   curl -sL https://github.com/dfla-me/scrop/archive/refs/tags/v0.2.4.tar.gz | shasum -a 256
+   curl -sL https://github.com/dfla-me/scrop/archive/refs/tags/v0.2.5.tar.gz | shasum -a 256
    ```
 3b. In the `homebrew-scrop` tap repo, update `Formula/scrop.rb` with the new
    `url` (tag) and `sha256`. Push.
