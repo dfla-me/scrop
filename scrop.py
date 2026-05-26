@@ -1,11 +1,23 @@
+from __future__ import annotations
+
 import argparse
 import os
 import re
 import sys
-from typing import List, Optional, Tuple
+import threading
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
-import cv2
-import numpy as np
+# cv2 and numpy are imported lazily inside main() so that:
+#   * `scrop --help` and quick-fail paths (bad args, missing file) stay snappy
+#   * the actual cv2 import is wrapped in a visible progress indicator,
+#     since the first-time native library load can take several seconds
+#     while macOS dyld resolves the OpenCV shared object on a cold cache.
+if TYPE_CHECKING:
+    import cv2  # noqa: F401
+    import numpy as np  # noqa: F401
+else:
+    cv2 = None  # type: ignore[assignment]
+    np = None  # type: ignore[assignment]
 
 OPENCV_FORMAT_EXTENSIONS = {
     "JPEG": [".jpg", ".jpeg"],
@@ -27,6 +39,41 @@ OUTPUT_EXTENSIONS = {
     "jpeg": ".jpg",
     "png": ".png",
 }
+
+
+def _load_opencv() -> None:
+    """Import cv2 and numpy lazily with a visible progress indicator.
+
+    cv2's first import on a cold filesystem cache can take several seconds.
+    We print a single line on stderr and append dots every 0.5s from a
+    background thread so the user knows the CLI hasn't hung.
+    """
+    global cv2, np
+    if cv2 is not None:
+        return
+
+    loaded = threading.Event()
+
+    def _spinner() -> None:
+        sys.stderr.write("scrop: loading OpenCV")
+        sys.stderr.flush()
+        while not loaded.wait(timeout=0.5):
+            sys.stderr.write(".")
+            sys.stderr.flush()
+        sys.stderr.write(" done.\n")
+        sys.stderr.flush()
+
+    spinner = threading.Thread(target=_spinner, daemon=True)
+    spinner.start()
+    try:
+        import cv2 as _cv2  # noqa: WPS433
+        import numpy as _np  # noqa: WPS433
+    finally:
+        loaded.set()
+        spinner.join(timeout=2.0)
+
+    cv2 = _cv2
+    np = _np
 
 
 def parse_opencv_supported_file_types(build_info: str) -> Tuple[str, List[str]]:
@@ -175,6 +222,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not os.path.isfile(args.input_image):
         print(f"scrop: input image not found: {args.input_image}", file=sys.stderr)
         return 1
+
+    # Heavy imports happen here so quick-fail paths above stay instant.
+    _load_opencv()
 
     build_info = cv2.getBuildInformation()
     supported_types, supported_extensions = parse_opencv_supported_file_types(build_info)
