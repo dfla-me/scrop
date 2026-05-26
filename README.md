@@ -50,13 +50,13 @@ This repo is the source. Distribution goes through a separate
 1. Bump `version` in [pyproject.toml](pyproject.toml).
 2. Commit, tag, and push:
    ```sh
-   git tag v0.1.0
+   git tag v0.2.0
    git push origin main --tags
    ```
 3. Use the `publish.sh` script to:
 3a. Grab the tarball SHA:
    ```sh
-   curl -sL https://github.com/dfla-me/scrop/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256
+   curl -sL https://github.com/dfla-me/scrop/archive/refs/tags/v0.2.0.tar.gz | shasum -a 256
    ```
 3b. In the `homebrew-scrop` tap repo, update `Formula/scrop.rb` with the new
    `url` (tag) and `sha256`. Push.
@@ -78,6 +78,10 @@ Requires Python 3.10 or newer. This project pins a dev Python via
 # one-time: install the pinned interpreter
 pyenv install   # reads .python-version
 
+# if you previously had opencv-python installed, remove it first — it
+# conflicts with opencv-python-headless (both provide cv2)
+pip uninstall -y opencv-python || true
+
 # install scrop and its deps into the current environment in editable mode
 pip install -e .
 
@@ -86,4 +90,12 @@ scrop tests/sample.jpg /tmp/out
 ```
 
 The dev Python version is independent of the Homebrew formula's
-`python@3.13` — they don't need to match.
+`python@3.14` — they don't need to match.
+
+### Why `opencv-python-headless`?
+
+scrop only needs cv2's image I/O and geometry primitives, not GUI windows,
+video codecs, or HighGUI. The `-headless` wheel is a ~80 MB self-contained
+binary that gives us the same `import cv2` API without dragging in Qt,
+ffmpeg, VTK, or the rest of the Homebrew `opencv` dependency tree
+(~2 GB). It's also much faster to import on first launch.
